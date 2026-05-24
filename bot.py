@@ -76,4 +76,6 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 app.add_handler(MessageHandler(filters.PHOTO, analyze_image))
 
 print("✅ دراكون يعمل الآن...")
-app.run_polling()
+
+# بدلاً من run_polling()
+app.run_polling(drop_pending_updates=True)
