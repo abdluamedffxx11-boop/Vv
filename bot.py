@@ -1,3 +1,5 @@
+import os
+import base64
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -7,21 +9,19 @@ from telegram.ext import (
     filters
 )
 from openai import OpenAI
-import os
-import base64
+from dotenv import load_dotenv
 
-# =========================
-# تحذير: هذه مفاتيح حساسة!
-# =========================
-BOT_TOKEN = "8977843494:AAHQuMmrfbBTu0GtJII5E5BDfb5Vt3ooCbo"
-OPENAI_API_KEY = "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"
-# =========================
+# تحميل المتغيرات (يعمل محلياً من ملف .env، وفي Railway من Variables)
+load_dotenv()
+
+BOT_TOKEN = os.getenv("8977843494:AAHQuMmrfbBTu0GtJII5E5BDfb5Vt3ooCbo")
+OPENAI_API_KEY = os.getenv("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")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 memory = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 أهلاً بك، أنا دراكون. كيف يمكنني مساعدتك اليوم؟")
+    await update.message.reply_text("👋 أهلاً بك، أنا دراكون، مساعدك الذكي.")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -31,21 +31,20 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         memory[user_id] = [{"role": "system", "content": "أنت دراكون، مساعد ذكي ومحترف."}]
 
     memory[user_id].append({"role": "user", "content": text})
-    
     if len(memory[user_id]) > 11:
         memory[user_id] = [memory[user_id][0]] + memory[user_id][-10:]
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini", 
+            model="gpt-4o-mini",
             messages=memory[user_id]
         )
         reply = response.choices[0].message.content
         memory[user_id].append({"role": "assistant", "content": reply})
         await update.message.reply_text(reply)
     except Exception as e:
-        await update.message.reply_text("حدث خطأ أثناء الاتصال بالذكاء الاصطناعي.")
-        print(f"Error: {e}")
+        print(f"Error details: {e}")
+        await update.message.reply_text("عذراً، حدث خطأ أثناء الاتصال بالذكاء الاصطناعي. تأكد من إعداد المفاتيح بشكل صحيح.")
 
 async def analyze_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
     status_msg = await update.message.reply_text("🔍 جاري التحليل...")
@@ -70,12 +69,11 @@ async def analyze_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if os.path.exists(image_path): os.remove(image_path)
         await status_msg.delete()
 
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-app.add_handler(MessageHandler(filters.PHOTO, analyze_image))
-
-print("✅ دراكون يعمل الآن...")
-
-# بدلاً من run_polling()
-app.run_polling(drop_pending_updates=True)
+# تشغيل البوت
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+    app.add_handler(MessageHandler(filters.PHOTO, analyze_image))
+    print("✅ دراكون يعمل الآن...")
+    app.run_polling(drop_pending_updates=True)
